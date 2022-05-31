@@ -4,8 +4,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.*;
 
@@ -20,10 +19,14 @@ import log.Logger;
 public class MainApplicationFrame extends JFrame
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
+    private WindowStateDict windowStateDict;
+    private Map<String, DictState> mapStates;
 
     public MainApplicationFrame() {
         //Make the big window be indented 50 pixels from each edge
         //of the screen.
+        windowStateDict = new WindowStateDict();
+        //windowStateDict.readStateFromFile();
         int inset = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         UIManager.put("OptionPane.yesButtonText", "Да");
@@ -38,20 +41,25 @@ public class MainApplicationFrame extends JFrame
             @Override
             public void windowClosing(WindowEvent e) {
                 super.windowClosing(e);
-                int result = JOptionPane.showConfirmDialog(MainApplicationFrame.this, "Закрыть приложение?", "Окно подтверждения", JOptionPane.YES_NO_OPTION);
+                int result = JOptionPane.showConfirmDialog(MainApplicationFrame.this,
+                        "Закрыть приложение?", "Окно подтверждения", JOptionPane.YES_NO_OPTION);
                 if (result == JOptionPane.YES_OPTION) {
+                    JInternalFrame[] frames = desktopPane.getAllFrames();
+                    windowStateDict.setNewState(frames);
+                    FileManager fileManager = new FileManager("write");
+                    fileManager.write(windowStateDict.getWindowStateDict());
                     System.exit(0);
                 }
             }
         });
-
         LogWindow logWindow = createLogWindow();
         addWindow(logWindow);
 
         GameWindow gameWindow = new GameWindow();
-        gameWindow.setSize(400,  400);
         addWindow(gameWindow);
 
+        JInternalFrame[] frames = desktopPane.getAllFrames();
+        windowStateDict.recoverNewState(frames);
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
     }
@@ -59,8 +67,6 @@ public class MainApplicationFrame extends JFrame
     protected LogWindow createLogWindow()
     {
         LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
-        logWindow.setLocation(10,10);
-        logWindow.setSize(300, 800);
         setMinimumSize(logWindow.getSize());
         logWindow.pack();
         Logger.debug("Протокол работает");
